@@ -5,6 +5,7 @@ from PIL import Image,ImageTk
 
 
 main = Tk()
+
 class Crop:
     def getBox(arr, frameIndex = 0, frameHIndex = 0):
         w, h = int(arr[3]), int(arr[4])
@@ -29,7 +30,7 @@ class Crop:
         a = open(dat, 'r')
         for line in a.readlines():
             arr = line.split()
-            if len(arr) <= 3 or arr[0]=="#": # emty line
+            if len(arr) <= 3 or "#" in arr[0]: # emty line
                 pass
             elif len(arr) == 5: # 
                 Crop.saveCrop(img, arr[0], Crop.getBox(arr))
@@ -105,15 +106,16 @@ class Text:
         err = 0
         for line in list_of_lines: #/find the last name
             arr = line.split()
-            if text == arr[0]: #if the same value was setted
-                self.edit_cancel(args)
-                err = 1
-                print("name has already used!")
-                
-            if self.text == arr[0]:
-                arr[0] = text
-                x_row = x
-                new_line = ' '.join(map(str,arr))
+            if len(arr)>3:
+                if text == arr[0]: #if the same value was setted
+                    self.edit_cancel(args)
+                    err = 1
+                    print("name has already used!")
+                    
+                if self.text == arr[0]:
+                    arr[0] = text
+                    x_row = x
+                    new_line = ' '.join(map(str,arr))
             x+=1
             
         if err == 0:
@@ -204,15 +206,15 @@ class Functions:
         a = open(self.data, 'r')
         for line in a.readlines():
             arr = line.split()
-            if len(arr) == 0 or "#" in arr[0]: # emty line
+            if len(arr) <= 3 or "#" in arr[0] or "\n" in arr[0]:# emty line
                 pass
-            if len(arr) == 5: # if array is only one block ()
+            elif len(arr) == 5: # if array is only one block ()
                 array = Crop.getBox(arr)
                 self.canvas.create_rectangle(array)
                 Text(self.canvas, arr[0], arr[1], arr[2], self.data) #canvas, name, x, y, text
                 #print(arr[0],getBox(arr))
                 
-            if len(arr) == 6: # if array is repeated in lines |||
+            elif len(arr) == 6: # if array is repeated in lines |||
                 numOfFrames = int(arr[5])
                 for frameIndex in range(0, numOfFrames):
                     array = Crop.getBox(arr, frameIndex)
@@ -220,7 +222,7 @@ class Functions:
                     Text(self.canvas, arr[0], arr[1], arr[2], self.data) #canvas, name, x, y, text
                     #print(arr[0] + '_f' + str(frameIndex),Crop.getBox(arr, frameIndex))
                     
-            if len(arr) == 7: # if array is repeated in lines and rows -_
+            elif len(arr) == 7: # if array is repeated in lines and rows -_
                 numOfFrames = int(arr[5])
                 numOFHFrames = int(arr[6])
                 for frameHIndex in range(0, numOFHFrames):
@@ -237,13 +239,19 @@ class Functions:
         img = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(0, 0,anchor = "nw",image=img)
         self.canvas.image = img
-    def edit_crop(self):##
-        self.show_image()
-        try:
-            self.show_crop()
-        except:
-            print("Load or generate crop data!###")
         
+    def edit_crop(self):
+        try:
+            self.show_image()
+            try:
+                self.show_crop()
+            except:
+                print("Your editor doesn't include crop_datas. The refresh is not necessary.")
+        except:
+            print("Your editor doesn't include image. The refresh is not necessary.")
+            
+        
+
 
 f = Functions()
 
@@ -257,7 +265,7 @@ menuFile.add_command(label="Crop", command=f.crop)
 upMenu.add_cascade(label="File", menu=menuFile)
 
 menuEdit = Menu(upMenu, tearoff=0)
-menuEdit.add_command(label="Show croping", command=f.edit_crop)
+menuEdit.add_command(label="Refresh layers", command=f.edit_crop)
 upMenu.add_cascade(label="Edit", menu=menuEdit)
 
 menuHelp = Menu(upMenu, tearoff=0)
@@ -265,7 +273,6 @@ menuHelp.add_command(label="Help shorcuts", command=f.help)
 upMenu.add_cascade(label="Help", menu=menuHelp)
 
 main.config(menu=upMenu)
-
 
 
 mainloop()
