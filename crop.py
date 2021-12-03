@@ -113,7 +113,7 @@ class Area:
         self.m.add_command(label ="Edit tile", command = self.edit_cropping_area)
         self.m.add_command(label ="Create new [Ctrl+n]")
         self.m.add_separator()
-        self.m.add_command(label ="Delete [no function]")
+        self.m.add_command(label ="Delete", command = self.delete)
         
         self.canvas.tag_bind(rect, '<Button-3>', self.right_click_menu)
         
@@ -122,7 +122,11 @@ class Area:
             self.m.tk_popup(args.x_root, args.y_root)
         finally:
             self.m.grab_release()
-    
+    def delete(self):
+        self.edit_crop_cancel()
+        self.save_edits_crop("","","","","","")
+
+        
     def edit_cropping_area(self):
         self.xvar.set(self.x)
         self.yvar.set(self.y)
@@ -161,24 +165,26 @@ class Area:
         data[0][0].selection_range(0, "end")
         data[0][0].focus_set()
     
-    def edit_crop_cancel(self, args):
+    def edit_crop_cancel(self, args=None):
         for n in range(7):
             self.canvas.delete(self.text+"an"+str(n))
         self.canvas.delete(self.text+"rect")
         self.canvas.delete(self.text+"b")
         self.canvas.delete(self.text+"x")
-        args.widget.destroy()
-        
+        try:
+            args.widget.destroy()
+        except:
+            pass
     
     def edit_crop_end(self, args):
         self.edit_crop_cancel(args)
         
-        x=self.xvar.get()
-        y=self.yvar.get()
-        w=self.wvar.get()
-        h=self.hvar.get()
-        rw=self.rwvar.get()
-        rh=self.rhvar.get()
+        x=self.xvar.get() or self.x
+        y=self.yvar.get() or self.y
+        w=self.wvar.get() or self.arr[3]
+        h=self.hvar.get() or self.arr[4]
+        rw=self.rwvar.get() or self.arr[5]
+        rh=self.rhvar.get() or self.arr[6]
         
         self.save_edits_crop(x,y,w,h,rw,rh)
     
@@ -194,31 +200,38 @@ class Area:
             if len(arr)>3:
                     
                 if self.text == arr[0]:
-                    arr[1] = x
-                    arr[2] = y
-                    arr[3] = w
-                    arr[4] = h
-                    arr[5] = rw
-                    arr[6] = rh
-                    x_row = n
-                    arr_n = arr
-                    new_line = ' '.join(map(str,arr))
+                    if x=="":
+                        x_row = n
+                    else:
+                        arr[1] = x
+                        arr[2] = y
+                        arr[3] = w
+                        arr[4] = h
+                        arr[5] = rw
+                        arr[6] = rh
+                        x_row = n
+                        arr_n = arr
+                        new_line = ' '.join(map(str,arr))
+                    continue
             n+=1
-        if not new_line==None:    
-            list_of_lines[x_row] = new_line+"\n" #set new line name
+        if new_line==None:
+            del list_of_lines[x_row]
+            self.rewrite_lines(list_of_lines)
+            del self   
             
-            a = open(self.location, 'w')
-            a.writelines(list_of_lines) #save file with new name
-            a.close()
+        else:
+            list_of_lines[x_row] = new_line+"\n" #set new line name
+            self.rewrite_lines(list_of_lines)
             self.x=int(x)
             self.y=int(y)
             self.arr= arr_n
-            
-            
             self.cropping_area_create()
             self.text_create()
-        
-        
+              
+    def rewrite_lines(self,list_of_lines):   
+        a = open(self.location, 'w')
+        a.writelines(list_of_lines) #save file with new name
+        a.close()  
         
         
     def text_create(self):
