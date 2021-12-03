@@ -11,7 +11,7 @@ The version v.1.0.0 will solve some issues and add right-click option to create 
 ## The editor
 ![image](https://user-images.githubusercontent.com/76277379/144668810-923f52e6-5819-4791-88bc-d3c3145ffba0.png)
 
-## (Syntax of croping file:)
+## (Syntax of tile_set.dat:)
 ```
 #comment
 name x0 y0 xL yL xN yN
