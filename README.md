@@ -12,7 +12,7 @@ example1 0 0 100 100 2 4
 ```
 
 ## The editor
-![image](https://user-images.githubusercontent.com/76277379/144668601-edb4cd32-73e2-4cd8-b051-98f635f64205.png)
+![image](https://user-images.githubusercontent.com/76277379/144668810-923f52e6-5819-4791-88bc-d3c3145ffba0.png)
 
 There are many issues. I will solve them...
 
