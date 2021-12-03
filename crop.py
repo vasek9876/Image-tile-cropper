@@ -146,7 +146,7 @@ class Area:
         y0 = self.y+30#self.y_click - 15
         y1 = self.y+40#self.y_click
         x_change = 85
-        data = [[ex, "x0"],[ey, "tile_y0"],[ew, "width"],[eh, "height"],[erw, "repeat_width"],[erh, "repeat_height"]]
+        data = [[ex, "x0"],[ey, "y0"],[ew, "width"],[eh, "height"],[erw, "repeat_width"],[erh, "repeat_height"]]
         
         self.canvas.create_rectangle([x0-10,y0-10,x0+10+x_change*6,y0+10+25],fill="blue", tag = self.text+"an"+str(6)) #rect around
         for n in range (6):
