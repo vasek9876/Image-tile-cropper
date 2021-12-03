@@ -1,5 +1,6 @@
 import os
 from tkinter import filedialog as fd
+from tkinter import messagebox
 from tkinter import *
 from PIL import Image,ImageTk
 
@@ -315,6 +316,7 @@ class Functions:
         self.canvas.bind("<B2-Motion>", self.scroll_move)
         self.canvas.bind_all("<MouseWheel>", self.scrollbar_move_y)
         self.canvas.bind_all("<Shift-MouseWheel>", self.scrollbar_move_x)
+        self.canvas.bind_all("<Control-c>", self.crop)
         self.canvas.pack(side="right",expand=True,fill="both")
     
     def scroll_start(self,args):
@@ -339,23 +341,50 @@ class Functions:
         
         self.edit_crop()
         
-    def crop(self):
+    def crop(self,args=None):
         try:
             self.image
-            self.dat
+            self.data
         except:
             print("There is not such file")
-        Crop.run(self.image,self.data,self.width,self.height)
+            return
+
         
-    def save_data(self):##
-        pass
+        Crop.run(self.image,self.data,self.width,self.height)
+        self.end_crop()
+        
+    def end_crop(self):
+        messagebox.showinfo("info", "Cropping Done")
+        print("Done")
+        
+    def loading(self):
+        from time import sleep
+        from tkinter import ttk
+        teams = range(100)
+        popup = Toplevel()
+        Label(popup, text="Files being downloaded").grid(row=0,column=0)
+
+        progress = 0
+        progress_var = DoubleVar()
+        progress_bar = ttk.Progressbar(popup, variable=progress_var, maximum=100)
+        progress_bar.grid(row=1, column=0)#.pack(fill=tk.X, expand=1, side=tk.BOTTOM)
+        popup.pack_slaves()
+
+        progress_step = float(100.0/len(teams))
+        for team in teams:
+            popup.update()
+            sleep(0.1) # lauch task
+            progress += progress_step
+            progress_var.set(progress)
+
+        return 0
     
     def help(self):
         print("Shortcuts:")
         print("scroll vertical"," - scroll_wheel")
         print("scroll hortical"," - shift + scroll_wheel")
         print("move"," - scroll_wheel_click")
-        print("zoom"," - ctrl + scroll_wheel")        
+        print("crop"," - ctrl + c")        
 
     def show_crop(self):
         a = open(self.data, 'r')
