@@ -4,9 +4,22 @@ from tkinter import *
 from PIL import Image,ImageTk
 
 
-main = Tk()
+
+
 
 class Crop:
+    def create_rectangle(canvas, arr, **kwargs):
+        x1,y1,x2,y2 = arr[0],arr[1],arr[2],arr[3]
+        if 'alpha' in kwargs:
+            alpha = int(kwargs.pop('alpha') * 255)
+            fill = kwargs.pop('fill')
+            fill = main.winfo_rgb(fill) + (alpha,)
+            image = Image.new('RGBA', (x2-x1, y2-y1), fill)
+            images = ImageTk.PhotoImage(image)
+            cimage =canvas.create_image(x1, y1, image=images, anchor='nw')
+        canvas.create_rectangle(x1, y1, x2, y2, **kwargs)
+        return cimage
+    
     def getBox(arr, frameIndex = 0, frameHIndex = 0):
         w, h = int(arr[3]), int(arr[4])
         x, y = int(arr[1]) + w*frameIndex, int(arr[2])+h*frameHIndex
@@ -32,13 +45,7 @@ class Crop:
             arr = line.split()
             if len(arr) <= 3 or "#" in arr[0]: # emty line
                 pass
-            elif len(arr) == 5: # 
-                Crop.saveCrop(img, arr[0], Crop.getBox(arr))
-            elif len(arr) == 6:
-                numOfFrames = int(arr[5])
-                for frameIndex in range(0, numOfFrames):
-                    Crop.saveCrop(img, arr[0] + '_f' + str(frameIndex), Crop.getBox(arr, frameIndex))
-            elif len(arr) == 7:
+            elif len(arr) <= 7:
                 numOfFrames = int(arr[5])
                 numOFHFrames = int(arr[6])
                 for frameHIndex in range(0, numOFHFrames):
@@ -46,35 +53,195 @@ class Crop:
                         Crop.saveCrop(img, arr[0] + '_f' + str(frameIndex)+str(frameHIndex), Crop.getBox(arr, frameIndex, frameHIndex))
         a.close()
 
-class Text:
-    def __init__(self, canvas, text, x, y, location):
-        self.textvar = StringVar()
-
+class Area:
+    def __init__(self, canvas, location, arr):
+        #main and editing
         self.location = location
         self.canvas = canvas
-        self.x = int(x)
-        self.y = int(y)
-        self.text = str(text)
         
-        self.a=canvas.create_text(self.x,self.y,fill="black",font="Times 10 bold",text=self.text,tag = self.text+"x")
-        self.r = self.canvas.create_rectangle(self.canvas.bbox(self.a),fill="white", tag = self.text+"b") # crate background
-        self.canvas.tag_lower(self.r,self.a) # set layout
+        #for both
+        self.arr = arr
+        self.arr_length = len(self.arr)
+        if self.arr_length < 6:
+            self.arr.append(1)
+            self.arr.append(1)
+        elif self.arr_length < 7:
+            self.arr.append(1)
+        else:
+            pass
+        self.arr_length = len(self.arr)
         
-        self.bind(self.text+"x")
+        self.text = str(self.arr[0])
+        self.x = int(self.arr[1])
+        self.y = int(self.arr[2])
+        
+        #for cropping area
+        self.xvar = StringVar() #cords x
+        self.yvar = StringVar() #cords y
+        self.wvar = StringVar() #width
+        self.hvar = StringVar() #height
+        self.rwvar = StringVar() #repeats w
+        self.rhvar = StringVar() #repeats h
+        
+        
+        self.x_click = None
+        self.y_click = None
+        self.cropping_area_create() #initialize areas
+        
+        #for text
+        self.textvar = StringVar()
+        self.text_create() #initialize text
         
         #self.canvas.tag_bind(str(self.name)+"x","<Enter>", self.tooltip_show)
         #self.canvas.tag_bind(str(self.name)+"x","<Leave>", self.tooltip_hide)
 
-    def bind(self,key):
+    def cropping_area_create(self):
+        numOfFrames = int(self.arr[5])
+        numOFHFrames = int(self.arr[6])
+        for frameHIndex in range(0, numOFHFrames):
+            for frameIndex in range(0, numOfFrames):
+                array = Crop.getBox(self.arr, frameIndex, frameHIndex)
+                #rect = self.canvas.create_rectangle(array)
+                rect = Crop.create_rectangle(self.canvas, array, tag = self.text+"rect",fill="green", alpha=.1)
+                self.rectangle_bind(rect)# crate croping
+
+    def rectangle_bind(self, rect):
+        self.m = Menu(main, tearoff = 0)
+        self.m.add_command(label = self.text, state=DISABLED)
+        self.m.add_separator()
+        self.m.add_command(label ="Edit tile", command = self.edit_cropping_area)
+        self.m.add_command(label ="Create new [Ctrl+n]")
+        self.m.add_separator()
+        self.m.add_command(label ="Delete [no function]")
+        
+        self.canvas.tag_bind(rect, '<Button-3>', self.right_click_menu)
+        
+    def right_click_menu(self,args):
+        try:
+            self.m.tk_popup(args.x_root, args.y_root)
+        finally:
+            self.m.grab_release()
+    
+    def edit_cropping_area(self):
+        self.xvar.set(self.x)
+        self.yvar.set(self.y)
+        self.wvar.set(self.arr[3])
+        self.hvar.set(self.arr[4])
+        self.rwvar.set(self.arr[5])
+        self.rhvar.set(self.arr[6])
+        
+        ex = Entry(main, width=10, textvariable=self.xvar, bd=0, highlightthickness=1, bg="white")
+        ey = Entry(main, width=10, textvariable=self.yvar, bd=0, highlightthickness=1, bg="white") 
+        ew = Entry(main, width=10, textvariable=self.wvar, bd=0, highlightthickness=1, bg="white") 
+        eh = Entry(main, width=10, textvariable=self.hvar, bd=0, highlightthickness=1, bg="white") 
+        erw = Entry(main, width=10, textvariable=self.rwvar, bd=0, highlightthickness=1, bg="white") 
+        erh = Entry(main, width=10, textvariable=self.rhvar, bd=0, highlightthickness=1, bg="white")
+            
+        x0 = self.x+30#self.x_click
+        y0 = self.y+30#self.y_click - 15
+        y1 = self.y+40#self.y_click
+        x_change = 85
+        data = [[ex, "x0"],[ey, "tile_y0"],[ew, "width"],[eh, "height"],[erw, "repeat_width"],[erh, "repeat_height"]]
+        
+        self.canvas.create_rectangle([x0-10,y0-10,x0+10+x_change*6,y0+10+25],fill="blue", tag = self.text+"an"+str(6)) #rect around
+        for n in range (6):
+            this_x = x0+x_change*n
+            a = self.canvas.create_text(this_x+25,y0,fill="black",font="Times 10 bold",text = data[n][1],tag = self.text+"an"+str(n))
+            r = self.canvas.create_rectangle(self.canvas.bbox(a),fill="white", tag = self.text+"an"+str(n)) # crate background
+            self.canvas.tag_lower(r,a) # set layout
+            
+            w = self.canvas.create_window(this_x, y1, window=data[n][0], tags=self.text+"an"+str(n), anchor="nw")
+            
+            data[n][0].bind("<Escape>", self.edit_crop_cancel) ###new###
+            data[n][0].bind("<Button-3>", self.edit_crop_end)
+            data[n][0].bind("<Return>", self.edit_crop_end)
+        
+        
+        data[0][0].selection_range(0, "end")
+        data[0][0].focus_set()
+    
+    def edit_crop_cancel(self, args):
+        for n in range(7):
+            self.canvas.delete(self.text+"an"+str(n))
+        self.canvas.delete(self.text+"rect")
+        self.canvas.delete(self.text+"b")
+        self.canvas.delete(self.text+"x")
+        args.widget.destroy()
+        
+    
+    def edit_crop_end(self, args):
+        self.edit_crop_cancel(args)
+        
+        x=self.xvar.get()
+        y=self.yvar.get()
+        w=self.wvar.get()
+        h=self.hvar.get()
+        rw=self.rwvar.get()
+        rh=self.rhvar.get()
+        
+        self.save_edits_crop(x,y,w,h,rw,rh)
+    
+    def save_edits_crop(self,x,y,w,h,rw,rh):
+    
+        a = open(self.location, 'r')
+        list_of_lines = a.readlines() #/n split
+
+        n = 0
+        new_line = None
+        for line in list_of_lines: #/find the last name
+            arr = line.split()
+            if len(arr)>3:
+                    
+                if self.text == arr[0]:
+                    arr[1] = x
+                    arr[2] = y
+                    arr[3] = w
+                    arr[4] = h
+                    arr[5] = rw
+                    arr[6] = rh
+                    x_row = n
+                    arr_n = arr
+                    new_line = ' '.join(map(str,arr))
+            n+=1
+        if not new_line==None:    
+            list_of_lines[x_row] = new_line+"\n" #set new line name
+            
+            a = open(self.location, 'w')
+            a.writelines(list_of_lines) #save file with new name
+            a.close()
+            self.x=int(x)
+            self.y=int(y)
+            self.arr= arr_n
+            
+            
+            self.cropping_area_create()
+            self.text_create()
+        
+        
+        
+        
+    def text_create(self):
+        self.a = self.canvas.create_text(self.x,self.y,fill="black",font="Times 10 bold",text=self.text,tag = self.text+"x")
+        self.r = self.canvas.create_rectangle(self.canvas.bbox(self.a),fill="white", tag = self.text+"b") # crate background
+        self.canvas.tag_lower(self.r,self.a) # set layout
+
+        self.text_bind(self.text+"x")
+        
+    def text_bind(self,key):
         self.binding = self.canvas.tag_bind(key,"<Button-1>", self.edit_begin)
         
-    def unbind(self):
+    def text_unbind(self):
         self.canvas.unbind("<Button 1>", self.binding)
         
     def edit_begin(self,args=None):
         self.textvar.set(self.text) 
         e = Entry(main, width=10, textvariable=self.textvar, bd=0,highlightthickness=1, bg="white") 
         e.selection_range(0, "end")
+        
+        #a = self.canvas.create_text(self.x,self.y-25,fill="black",font="Times 10 bold",text = self.text,tag = self.text+"a")
+        #r = self.canvas.create_rectangle(self.canvas.bbox(self.a),fill="white", tag = self.text+"a") # crate background
+        #self.canvas.tag_lower(r,a) # set layout
+        
         w = self.canvas.create_window(self.x, self.y, window=e, tags=self.text+"a", anchor="nw")
         e.focus_set()
         e.bind("<Return>", self.edit_end)
@@ -94,9 +261,6 @@ class Text:
         self.edit_cancel(args)
         text = self.textvar.get()
         self.save_edits(text,args)
-        
-        
-        
         
     def save_edits(self,text,args):
         a = open(self.location, 'r')
@@ -130,9 +294,9 @@ class Text:
             self.r = self.canvas.create_rectangle(self.canvas.bbox(self.a),fill="white", tag = text+"b") # crate background
             self.canvas.tag_lower(self.r,self.a) # set layout
             
-            self.unbind()
+            self.text_unbind()
             self.text = text #edit self.name
-            self.bind(text+"x")
+            self.text_bind(text+"x")
 
 class Functions:
     def __init__(self):
@@ -152,7 +316,7 @@ class Functions:
         self.canvas.bind_all("<MouseWheel>", self.scrollbar_move_y)
         self.canvas.bind_all("<Shift-MouseWheel>", self.scrollbar_move_x)
         self.canvas.pack(side="right",expand=True,fill="both")
-        
+    
     def scroll_start(self,args):
         self.canvas.scan_mark(args.x, args.y)
 
@@ -166,13 +330,11 @@ class Functions:
         self.canvas.xview_scroll(int(-2*(args.delta/120)), "units")
         
     def open_data(self):
-        self.data =  fd.askopenfilename(initialdir=os.getcwd(), filetypes =[('Data files', '*.dat')],
-                                        title='Open dat')
+        self.data =  fd.askopenfilename(initialdir=os.getcwd(), filetypes =[('Data files', '*.dat')], title='Open dat')
         self.show_crop()
         
     def open_image(self):
-        self.image = Image.open(fd.askopenfilename(initialdir=os.getcwd(), filetypes =[('Image Files', '*.png')],
-                                        title='Open image'))
+        self.image = Image.open(fd.askopenfilename(initialdir=os.getcwd(), filetypes =[('Image Files', '*.png')], title='Open image'))
         self.width, self.height = self.image.size
         
         self.edit_crop()
@@ -193,44 +355,14 @@ class Functions:
         print("scroll vertical"," - scroll_wheel")
         print("scroll hortical"," - shift + scroll_wheel")
         print("move"," - scroll_wheel_click")
-        print("zoom"," - ctrl + scroll_wheel")
+        print("zoom"," - ctrl + scroll_wheel")        
 
-    # copied
-    
-
-
-        
-
-    
     def show_crop(self):
         a = open(self.data, 'r')
         for line in a.readlines():
             arr = line.split()
-            if len(arr) <= 3 or "#" in arr[0] or "\n" in arr[0]:# emty line
-                pass
-            elif len(arr) == 5: # if array is only one block ()
-                array = Crop.getBox(arr)
-                self.canvas.create_rectangle(array)
-                Text(self.canvas, arr[0], arr[1], arr[2], self.data) #canvas, name, x, y, text
-                #print(arr[0],getBox(arr))
-                
-            elif len(arr) == 6: # if array is repeated in lines |||
-                numOfFrames = int(arr[5])
-                for frameIndex in range(0, numOfFrames):
-                    array = Crop.getBox(arr, frameIndex)
-                    self.canvas.create_rectangle(array)
-                    Text(self.canvas, arr[0], arr[1], arr[2], self.data) #canvas, name, x, y, text
-                    #print(arr[0] + '_f' + str(frameIndex),Crop.getBox(arr, frameIndex))
-                    
-            elif len(arr) == 7: # if array is repeated in lines and rows -_
-                numOfFrames = int(arr[5])
-                numOFHFrames = int(arr[6])
-                for frameHIndex in range(0, numOFHFrames):
-                    for frameIndex in range(0, numOfFrames):
-                        array = Crop.getBox(arr, frameIndex, frameHIndex)
-                        self.canvas.create_rectangle(array)# crate croping
-                        Text(self.canvas, arr[0], arr[1], arr[2], self.data) #canvas, name, x, y, text
-                        #print(arr[0] + '_f' + str(frameIndex)+str(frameHIndex),Crop.getBox(arr, frameIndex, frameHIndex))
+            if len(arr) >= 5 and not "#" in arr[0] and not "\n" in arr[0] :# emty line
+                Area(self.canvas, self.data, arr) #canvas, file direction, 
         a.close()
 
     def show_image(self):
@@ -243,15 +375,17 @@ class Functions:
     def edit_crop(self):
         try:
             self.show_image()
-            try:
-                self.show_crop()
-            except:
-                print("Your editor doesn't include crop_datas. The refresh is not necessary.")
         except:
-            print("Your editor doesn't include image. The refresh is not necessary.")
+            pass
             
-        
+        try:
+            self.show_crop()
+        except:
+            pass
 
+main = Tk()
+main.title('Image cropper')
+main.iconbitmap('Icon.ico')
 
 f = Functions()
 
@@ -273,6 +407,5 @@ menuHelp.add_command(label="Help shorcuts", command=f.help)
 upMenu.add_cascade(label="Help", menu=menuHelp)
 
 main.config(menu=upMenu)
-
 
 mainloop()
