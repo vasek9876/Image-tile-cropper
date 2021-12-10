@@ -5,6 +5,8 @@ from tkinter import colorchooser, messagebox, filedialog as fd, mainloop  # GUI 
 from tkinter import BOTH, DISABLED  # GUI constants
 from PIL import Image, ImageTk  #
 
+NUMBER_NEW = 0
+
 
 def create_rectangle(canvas, arr, **kwargs):
     x1, y1, x2, y2 = arr[0], arr[1], arr[2], arr[3]
@@ -81,8 +83,13 @@ def run(img, dat):
 
 
 class Area:
-    def __init__(self, canvas, location, arr):
+    def __init__(self, canvas, location, arr, args=None):
+        global NUMBER_NEW
+        NUMBER_NEW += 1
+
         # main and editing
+        self.binding_rect = None
+        self.editing_ready = True
         self.text_item = None
         self.binding = None
         self.other = None
@@ -120,29 +127,66 @@ class Area:
         self.textvar = StringVar()
         self.text_create()  # initialize text
 
-        # self.canvas.tag_bind(str(self.name)+"x","<Enter>", self.tooltip_show)
-        # self.canvas.tag_bind(str(self.name)+"x","<Leave>", self.tooltip_hide)
+    def create_new_cropping(self, args=None):
+
+        a = open(self.location, 'r')
+        list_of_lines = a.readlines()  # /n split
+        data = [self.canvas, self.location, ["new" + str(NUMBER_NEW + 1),
+                                             int(self.arr[1]) - 100,
+                                             int(self.arr[2]) - 50,
+                                             self.arr[3],
+                                             self.arr[4],
+                                             self.arr[5],
+                                             self.arr[6], ]]
+
+        list_of_lines.append("\n" + ' '.join(map(str, data[2])))
+
+        self.rewrite_lines(list_of_lines)
+
+        Area(*data)
 
     def cropping_area_create(self):
-        num_of_frames = int(self.arr[5])
-        num_ofh_frames = int(self.arr[6])
-        for frameHIndex in range(0, num_ofh_frames):
-            for frameIndex in range(0, num_of_frames):
-                array = getBox(self.arr, frameIndex, frameHIndex)
-                # rect = self.canvas.create_rectangle(array)
-                rect = create_rectangle(self.canvas, array, tag=self.arr[0] + "rect", fill="green", alpha=.1)
-                self.rectangle_bind(rect)  # crate cropping
+        num_of_frames1 = int(self.arr[5])
+        num_of_frames2 = int(self.arr[6])
+        x0 = int(self.arr[1])
+        y0 = int(self.arr[2])
+        chx = int(self.arr[3])  # change x
+        chy = int(self.arr[4])  # change y
 
-    def rectangle_bind(self, rect):
+        for x in range(0, num_of_frames1):  #
+            for y in range(0, num_of_frames2):
+                array = getBox([None, x0, y0, chx, chy])
+                self.canvas.create_rectangle(array, tag=self.arr[0] + "rect")
+                y0 += chy
+            y0 = int(self.arr[2])
+            x0 += chx
+
+        array = getBox([None, int(self.arr[1]), int(self.arr[2]),
+                        num_of_frames1 * int(self.arr[3]),
+                        num_of_frames2 * int(self.arr[4])])  # full rectangle
+
+        self.rectangle_functions(array)
+
+    def rectangle_functions(self, array):
+        rect = create_rectangle(self.canvas, array, tag=self.arr[0] + "rect", fill="green", alpha=.1)
+
+        self.rectangle_right_click()
+        self.rectangle_bind(rect)  # crate cropping
+
+    def rectangle_right_click(self):
         self.m = Menu(main, tearoff=0)
         self.m.add_command(label=self.arr[0], state=DISABLED)
         self.m.add_separator()
         self.m.add_command(label="Edit tile", command=self.edit_cropping_area)
-        self.m.add_command(label="Create new [Ctrl+n]")
+        self.m.add_command(label="Create new", command=self.create_new_cropping)
         self.m.add_separator()
         self.m.add_command(label="Delete", command=self.delete)
 
-        self.canvas.tag_bind(rect, '<Button-3>', self.right_click_menu)
+    def rectangle_bind(self, rect):
+        self.binding_rect = self.canvas.tag_bind(rect, '<Button-3>', self.right_click_menu)
+
+    def rectangle_unbind(self):
+        self.canvas.unbind("<Button 3>", self.binding_rect)
 
     def right_click_menu(self, args):
         try:
@@ -159,6 +203,12 @@ class Area:
         self.save_edits_crop(self.arr[1], self.arr[2], self.arr[3], self.arr[4], self.arr[5], self.arr[6])
 
     def edit_cropping_area(self):
+        if self.editing_ready is False:
+            print("You are already editing the name")
+            return
+
+        self.editing_ready = False
+
         self.xvar.set(self.arr[1])
         self.yvar.set(self.arr[2])
         self.wvar.set(self.arr[3])
@@ -191,7 +241,7 @@ class Area:
 
             self.canvas.create_window(this_x, y1, window=data[n][0], tags=self.arr[0] + "an" + str(n), anchor="nw")
 
-            data[n][0].bind("<Escape>", self.edit_crop_cancel)
+            data[n][0].bind("<Escape>", self.edit_crop_end)
             data[n][0].bind("<Button-3>", self.edit_crop_end)
             data[n][0].bind("<Return>", self.edit_crop_end)
 
@@ -206,6 +256,9 @@ class Area:
         self.canvas.delete(self.arr[0] + "x")
         if args is not None:
             args.widget.destroy()
+        self.editing_ready = True
+
+        self.rectangle_unbind()
 
     def edit_crop_end(self, args):
         self.edit_crop_cancel(args)
@@ -217,6 +270,7 @@ class Area:
             h = self.hvar.get()
             rw = self.rwvar.get()
             rh = self.rhvar.get()
+
         except:
             self.default()
             print("Values has been set to default. The input value include empty entry.")
@@ -287,6 +341,12 @@ class Area:
         self.canvas.unbind("<Button 1>", self.binding)
 
     def edit_text_begin(self, args=None):
+        if self.editing_ready is False:
+            print("You are already editing the values")
+            return
+
+        self.editing_ready = False
+
         self.textvar.set(self.arr[0])
         e = Entry(main, width=10, textvariable=self.textvar, bd=0, highlightthickness=1, bg="white")
         e.selection_range(0, "end")
@@ -308,6 +368,7 @@ class Area:
     def edit_text_cancel(self, args):
         self.canvas.delete(self.arr[0] + "a")
         args.widget.destroy()
+        self.editing_ready = True
 
     def edit_text_end(self, args):
         self.edit_text_cancel(args)
@@ -354,7 +415,10 @@ class Area:
             self.arr[0] = text  # edit self.name
             self.text_bind(text + "x")
 
-        else:
+        elif self.arr[0] == text:  # if the taken value is the old value
+            pass
+
+        else:  # else if the name is already used
             print("name has already used!")
 
     def edit_color(self):  # no usage
@@ -382,11 +446,17 @@ class Functions:
 
         self.canvas.config(width=300, height=300)
         self.canvas.config(xscrollcommand=hbar1.set, yscrollcommand=vbar1.set)
+
         self.canvas.bind("<ButtonPress-2>", self.scroll_start)
         self.canvas.bind("<B2-Motion>", self.scroll_move)
         self.canvas.bind_all("<MouseWheel>", self.scrollbar_move_y)
         self.canvas.bind_all("<Shift-MouseWheel>", self.scrollbar_move_x)
         self.canvas.bind_all("<Control-c>", self.crop)
+        self.canvas.bind_all("<Control-r>", self.pop_up_crop)
+        self.canvas.bind_all("<Control-d>", self.open_data)
+        self.canvas.bind_all("<Control-a>", self.open_image)
+        self.canvas.bind_all("<Control-h>", self.help)
+
         self.canvas.pack(side="right", expand=True, fill="both")
 
     def scroll_start(self, args):
@@ -401,13 +471,15 @@ class Functions:
     def scrollbar_move_x(self, args):
         self.canvas.xview_scroll(int(-2 * (args.delta / 120)), "units")
 
-    def open_data(self):
+    def open_data(self, args=None):
         self.data = fd.askopenfilename(initialdir=os.getcwd(), filetypes=[('Data files', '*.dat')], title='Open dat')
+
         self.show_crop()
 
-    def open_image(self):
+    def open_image(self, args=None):
         self.image = Image.open(
             fd.askopenfilename(initialdir=os.getcwd(), filetypes=[('Image Files', '*.png')], title='Open image'))
+
         self.width, self.height = self.image.size
 
         self.pop_up_crop()
@@ -420,12 +492,16 @@ class Functions:
             print("There is not such file")
 
     @staticmethod
-    def help():
+    def help(args=None):
         print("Shortcuts:")
+        print("help", " - ctrl + h")
         print("scroll vertical", " - scroll_wheel")
         print("scroll horizontal", " - shift + scroll_wheel")
         print("move", " - scroll_wheel_click")
         print("crop", " - ctrl + c")
+        print("refresh", " - ctrl + r")
+        print("open data", " - ctrl + d")
+        print("open image", " - ctrl + a")
 
     def show_crop(self):
         a = open(self.data, 'r')
@@ -442,15 +518,17 @@ class Functions:
         self.canvas.create_image(0, 0, anchor="nw", image=img)
         self.canvas.image = img
 
-    def pop_up_crop(self):
+    def pop_up_crop(self, args=None):
         if self.image is not None:
             self.show_image()
         else:
-            print("There is no loaded image file")
+            pass
+            # print("There is no loaded image file")
         if self.data is not None:
             self.show_crop()
         else:
-            print("There is no loaded data file")
+            pass
+            # print("There is no loaded data file")
 
 
 if __name__ == '__main__':
@@ -464,17 +542,17 @@ if __name__ == '__main__':
     upMenu = Menu(main)
 
     menuFile = Menu(upMenu, tearoff=0)
-    menuFile.add_command(label="Open dat", command=f.open_data)
-    menuFile.add_command(label="Open image", command=f.open_image)
-    menuFile.add_command(label="Crop", command=f.crop)
+    menuFile.add_command(label="Open dat [ctrl+d]", command=f.open_data)
+    menuFile.add_command(label="Open image [ctrl+a]", command=f.open_image)
+    menuFile.add_command(label="Crop [ctrl+c]", command=f.crop)
     upMenu.add_cascade(label="File", menu=menuFile)
 
     menuEdit = Menu(upMenu, tearoff=0)
-    menuEdit.add_command(label="Refresh layers", command=f.pop_up_crop)
+    menuEdit.add_command(label="Repeat import [ctrl+r]", command=f.pop_up_crop)
     upMenu.add_cascade(label="Edit", menu=menuEdit)
 
     menuHelp = Menu(upMenu, tearoff=0)
-    menuHelp.add_command(label="Help shortcuts", command=f.help)
+    menuHelp.add_command(label="Help shortcuts [ctrl+h]", command=f.help)
     upMenu.add_cascade(label="Help", menu=menuHelp)
 
     main.config(menu=upMenu)
