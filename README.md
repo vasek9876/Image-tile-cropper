@@ -1,10 +1,10 @@
 # Image-tile-cropper
 It is small project which is creating in python tkinter. The goal is to make a tileimages editor. The editor should do crop + edit, delete and create cropping area.
 ## Version description
-This app is in version v.0.8.0
-- include refresch layers (for reset binding - the bug)
+This app is in version v.1.0.0
+- include refresch layers (for reset binding)
+- crop, edit, create cropping area
 
-The version v.1.0.0 will try to solve every issues and add right-click option to create new cropping area.  
 
 ## The editor
 ![image](https://user-images.githubusercontent.com/76277379/144668810-923f52e6-5819-4791-88bc-d3c3145ffba0.png)
