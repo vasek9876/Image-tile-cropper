@@ -1,8 +1,10 @@
 import os
 from PIL import Image, ImageTk
+import json
 
 MIDNAME = "_f"
 START_NUMBER = 0
+TEMP_FILE = "temp.dat"
 
 def getBox(arr, frame_v_index=0, frame_h_index=0):
     w, h = int(arr[3]), int(arr[4])
@@ -18,6 +20,31 @@ def saveCrop(img, title, box):
     except Exception as e:
         print('fail: ' + title + ' -- ' + str(e))
 
+def useJson(datJson):
+    f = open(datJson)
+ 
+    # returns JSON object as
+    # a dictionary
+    data = json.load(f)
+
+    #margin, margin, tilewidth, tileheight, tilecount/columns, columns
+    img =  str(data["image"])
+    line = str(data["name"]) + " " + str(data["margin"]) + " " + str(data["margin"]) + " " + \
+    str(data["tilewidth"]) + " " + str(data["tileheight"])+ " " + \
+    str(int(int(data["tilecount"])/int(data["columns"])))+ " " + str(data["columns"])
+
+    
+     
+    # Closing file
+    f.close()
+
+    temp = open(TEMP_FILE, "w+")
+    temp.write(line+"\n")
+    temp.close()
+
+    run(img, TEMP_FILE)
+
+    os.remove(TEMP_FILE)
 
 def run(img, dat):
     img = Image.open(img).convert("RGBA")
@@ -43,3 +70,4 @@ def run(img, dat):
 
 if __name__ == "__main__": 
     run("iso_grass.png", "tile_set.dat")
+    useJson("Tiles.tsj") # from Tiled (exported)
