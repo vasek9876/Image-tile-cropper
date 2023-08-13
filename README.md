@@ -1,10 +1,13 @@
 # Image-tile-cropper
-It is small project which is creating in python tkinter. The goal is to make a tileimages editor. The editor should do crop + edit, delete and create cropping area.
+This small project has created in python tkinter (using PIL). You can use app named Tiled. Export data and use them to crop your tileset when your game has been loading.
+
 ## Version description
 This app is in version v.1.0.0
 - include refresch layers (for reset binding)
 - crop, edit, create cropping area
 
+## News
+There is new file named Game_asset_cropper.py. This file can be used as library for cropping tiles by .Json or .dat patern.
 
 ## The editor
 ![image](https://user-images.githubusercontent.com/76277379/144668810-923f52e6-5819-4791-88bc-d3c3145ffba0.png)
